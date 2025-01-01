@@ -4,6 +4,8 @@ import { genSaltSync, hashSync } from 'bcrypt-ts';
 import { and, asc, desc, eq, gt, gte } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
+import { sql } from '@vercel/postgres';
+import { z } from 'zod';
 
 import {
   user,
@@ -25,6 +27,24 @@ import { BlockKind } from '@/components/block';
 // biome-ignore lint: Forbidden non-null assertion.
 const client = postgres(process.env.POSTGRES_URL!);
 const db = drizzle(client);
+
+const LessonPlanSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  evaluatorName: z.string(),
+  department: z.string(),
+  subject: z.string(),
+  year: z.string(),
+  week: z.string(),
+  objectives: z.string(),
+  activities: z.string(),
+  materials: z.string(),
+  assessment: z.string(),
+  createdAt: z.date(),
+  updatedAt: z.date()
+});
+
+type LessonPlan = z.infer<typeof LessonPlanSchema>;
 
 export async function getUser(email: string): Promise<Array<User>> {
   try {
@@ -162,7 +182,7 @@ export async function getVotesByChatId({ id }: { id: string }) {
   try {
     return await db.select().from(vote).where(eq(vote.chatId, id));
   } catch (error) {
-    console.error('Failed to get votes by chat id from database', error);
+    console.error('Failed to get votes by chat id from database');
     throw error;
   }
 }
@@ -327,4 +347,90 @@ export async function updateChatVisiblityById({
     console.error('Failed to update chat visibility in database');
     throw error;
   }
+}
+
+export async function getLessonPlansByUserId({ id }: { id: string }) {
+  const { rows } = await sql`
+    SELECT * FROM lesson_plans 
+    WHERE user_id = ${id} 
+    ORDER BY created_at DESC
+  `;
+  return rows;
+}
+
+export async function getLessonPlanById({ id, userId }: { id: string; userId: string }) {
+  const { rows } = await sql`
+    SELECT * FROM lesson_plans 
+    WHERE id = ${id} AND user_id = ${userId} 
+    LIMIT 1
+  `;
+  return rows[0];
+}
+
+export async function createLessonPlan({
+  userId,
+  evaluatorName,
+  department,
+  subject,
+  year,
+  week,
+  objectives,
+  activities,
+  materials,
+  assessment
+}: Omit<LessonPlan, 'id' | 'createdAt' | 'updatedAt'>) {
+  const { rows } = await sql`
+    INSERT INTO lesson_plans (
+      user_id,
+      evaluator_name,
+      department,
+      subject,
+      year,
+      week,
+      objectives,
+      activities,
+      materials,
+      assessment
+    ) VALUES (
+      ${userId},
+      ${evaluatorName},
+      ${department},
+      ${subject},
+      ${year},
+      ${week},
+      ${objectives},
+      ${activities},
+      ${materials},
+      ${assessment}
+    )
+    RETURNING *
+  `;
+  return rows[0];
+}
+
+export async function updateLessonPlan({
+  id,
+  userId,
+  ...data
+}: Partial<LessonPlan> & { id: string; userId: string }) {
+  const updates = Object.entries(data)
+    .filter(([_, value]) => value !== undefined)
+    .map(([key, value]) => ({ key: key, value: value }));
+
+  if (updates.length === 0) return null;
+
+  const setClause = updates
+    .map(({ key }) => `${key.toLowerCase()} = $${key}`)
+    .join(', ');
+
+  const values = Object.fromEntries(updates.map(({ key, value }) => [key, value]));
+
+  const { rows } = await sql`
+    UPDATE lesson_plans 
+    SET ${sql(setClause)}, updated_at = NOW()
+    WHERE id = ${id} AND user_id = ${userId}
+    RETURNING *
+  `;
+  
+  return rows[0];
 }

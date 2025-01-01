@@ -26,35 +26,48 @@ export function AppSidebar({ user }: { user: User | undefined }) {
     <Sidebar className="group-data-[side=left]:border-r-0">
       <SidebarHeader>
         <SidebarMenu>
-          <div className="flex flex-row justify-between items-center">
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-row justify-between items-center">
+              <Link
+                href="/"
+                onClick={() => {
+                  setOpenMobile(false);
+                }}
+                className="flex flex-row gap-3 items-center"
+              >
+                <span className="text-lg font-semibold px-2 hover:bg-muted rounded-md cursor-pointer">
+                  Chatbot
+                </span>
+              </Link>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    type="button"
+                    className="p-2 h-fit"
+                    onClick={() => {
+                      setOpenMobile(false);
+                      router.push('/');
+                      router.refresh();
+                    }}
+                  >
+                    <PlusIcon />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent align="end">New Chat</TooltipContent>
+              </Tooltip>
+            </div>
+            
+            {/* Added Lesson Planner Link */}
             <Link
-              href="/"
+              href="/lesson-planner"
               onClick={() => {
                 setOpenMobile(false);
               }}
-              className="flex flex-row gap-3 items-center"
+              className="flex flex-row items-center px-2 py-1.5 text-sm hover:bg-muted rounded-md cursor-pointer"
             >
-              <span className="text-lg font-semibold px-2 hover:bg-muted rounded-md cursor-pointer">
-                Chatbot
-              </span>
+              <span>Lesson Planner</span>
             </Link>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  type="button"
-                  className="p-2 h-fit"
-                  onClick={() => {
-                    setOpenMobile(false);
-                    router.push('/');
-                    router.refresh();
-                  }}
-                >
-                  <PlusIcon />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent align="end">New Chat</TooltipContent>
-            </Tooltip>
           </div>
         </SidebarMenu>
       </SidebarHeader>
